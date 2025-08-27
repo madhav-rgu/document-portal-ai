@@ -7,7 +7,7 @@ on:
 env:
   AWS_REGION: us-east-2
   ECR_REPOSITORY: documentportalai
-  ECS_SERVICE: document-portal-service
+  ECS_SERVICE: document-portal-ai-service
   ECS_CLUSTER: document-portal-ai-cluster
   ECS_TASK_DEFINITION: .github/workflows/task_definition.json
   CONTAINER_NAME: document-portal-container
@@ -90,11 +90,20 @@ jobs:
       - name: Print Rendered Task
         run: cat ${{ steps.render-task.outputs.task-definition }}
       - name: Deploy to ECS
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-        with:
-          task-definition: ${{ steps.render-task.outputs.task-definition }}
-          service: ${{ env.ECS_SERVICE }}
-          cluster: ${{ env.ECS_CLUSTER }}
-          wait-for-service-stability: true
+        run: |
+          aws ecs update-service \
+          --cluster ${{ env.ECS_CLUSTER }} \
+          --service ${{ env.ECS_SERVICE }} \
+          --task-definition ${{ steps.render-task.outputs.task-definition }} \
+          --force-new-deployment || true
+
+          if [ $? -ne 0 ]; then
+          aws ecs create-service \
+          --cluster ${{ env.ECS_CLUSTER }} \
+          --service-name ${{ env.ECS_SERVICE }} \
+          --task-definition ${{ steps.render-task.outputs.task-definition }} \
+          --desired-count 1 \
+          --launch-type FARGATE
+          fi
       - name: Done!
         run: echo "Deployed to ECS Fargate Successfully"
