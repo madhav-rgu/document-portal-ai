@@ -87,14 +87,21 @@ jobs:
           task-definition: ${{ env.ECS_TASK_DEFINITION }}
           container-name: ${{ env.CONTAINER_NAME }}
           image: ${{ needs.build-and-push.outputs.image }}
-      - name: Print Rendered Task
-        run: cat ${{ steps.render-task.outputs.task-definition }}
       - name: Deploy to ECS
         run: |
+          # Step 1: Register the new task definition with AWS.
+          # The --cli-input-json file path comes from the render-task step.
+          # We capture the output and parse it for the new task definition ARN.
+          TASK_DEFINITION_ARN=$(aws ecs register-task-definition \
+            --cli-input-json file://${{ steps.render-task.outputs.task-definition }} \
+            --region us-east-2 | jq -r '.taskDefinition.taskDefinitionArn')
+
+          echo "Registered Task Definition ARN: $TASK_DEFINITION_ARN"
+
           aws ecs update-service \
             --cluster ${{ env.ECS_CLUSTER }} \
             --service ${{ env.ECS_SERVICE }} \
-            --task-definition ${{ steps.render-task.outputs.task-definition }} \
+            --task-definition $TASK_DEFINITION_ARN \
             --force-new-deployment || true
 
           if [ $? -ne 0 ]; then
@@ -102,7 +109,7 @@ jobs:
             aws ecs create-service \
               --cluster ${{ env.ECS_CLUSTER }} \
               --service-name ${{ env.ECS_SERVICE }} \
-              --task-definition ${{ steps.render-task.outputs.task-definition }} \
+              --task-definition $TASK_DEFINITION_ARN \
               --desired-count 1 \
               --launch-type FARGATE
           fi
