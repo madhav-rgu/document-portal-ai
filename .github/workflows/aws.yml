@@ -91,18 +91,18 @@ jobs:
         run: cat ${{ steps.render-task.outputs.task-definition }}
       - name: Deploy to ECS
         run: |
-          aws ecs update-service \
-          --cluster ${{ env.ECS_CLUSTER }} \
-          --service ${{ env.ECS_SERVICE }} \
-          --task-definition ${{ steps.render-task.outputs.task-definition }} \
+          aws ecs update-service
+          --cluster ${{ env.ECS_CLUSTER }}
+          --service ${{ env.ECS_SERVICE }}
+          --task-definition ${{ steps.render-task.outputs.task-definition }}
           --force-new-deployment || true
 
           if [ $? -ne 0 ]; then
-          aws ecs create-service \
-          --cluster ${{ env.ECS_CLUSTER }} \
-          --service-name ${{ env.ECS_SERVICE }} \
-          --task-definition ${{ steps.render-task.outputs.task-definition }} \
-          --desired-count 1 \
+          aws ecs create-service
+          --cluster ${{ env.ECS_CLUSTER }}
+          --service-name ${{ env.ECS_SERVICE }}
+          --task-definition ${{ steps.render-task.outputs.task-definition }}
+          --desired-count 1
           --launch-type FARGATE
           fi
       - name: Done!
