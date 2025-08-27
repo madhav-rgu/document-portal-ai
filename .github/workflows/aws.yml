@@ -98,12 +98,13 @@ jobs:
             --force-new-deployment || true
 
           if [ $? -ne 0 ]; then
-          aws ecs create-service \
-            --cluster ${{ env.ECS_CLUSTER }} \
-            --service-name ${{ env.ECS_SERVICE }} \
-            --task-definition ${{ steps.render-task.outputs.task-definition }} \
-            --desired-count 1 \
-            --launch-type FARGATE
+            echo "Service ${{ env.ECS_SERVICE }} does not exist. Creating it now."
+            aws ecs create-service \
+              --cluster ${{ env.ECS_CLUSTER }} \
+              --service-name ${{ env.ECS_SERVICE }} \
+              --task-definition ${{ steps.render-task.outputs.task-definition }} \
+              --desired-count 1 \
+              --launch-type FARGATE
           fi
       - name: Done!
         run: echo "Deployed to ECS Fargate Successfully"
