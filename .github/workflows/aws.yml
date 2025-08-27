@@ -88,30 +88,11 @@ jobs:
           container-name: ${{ env.CONTAINER_NAME }}
           image: ${{ needs.build-and-push.outputs.image }}
       - name: Deploy to ECS
-        run: |
-          # Step 1: Register the new task definition with AWS.
-          # The --cli-input-json file path comes from the render-task step.
-          # We capture the output and parse it for the new task definition ARN.
-          TASK_DEFINITION_ARN=$(aws ecs register-task-definition \
-            --cli-input-json file://${{ steps.render-task.outputs.task-definition }} \
-            --region us-east-2 | jq -r '.taskDefinition.taskDefinitionArn')
-
-          echo "Registered Task Definition ARN: $TASK_DEFINITION_ARN"
-
-          aws ecs update-service \
-            --cluster ${{ env.ECS_CLUSTER }} \
-            --service ${{ env.ECS_SERVICE }} \
-            --task-definition $TASK_DEFINITION_ARN \
-            --force-new-deployment || true
-
-          if [ $? -ne 0 ]; then
-            echo "Service ${{ env.ECS_SERVICE }} does not exist. Creating it now."
-            aws ecs create-service \
-              --cluster ${{ env.ECS_CLUSTER }} \
-              --service-name ${{ env.ECS_SERVICE }} \
-              --task-definition $TASK_DEFINITION_ARN \
-              --desired-count 1 \
-              --launch-type FARGATE
-          fi
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.render-task.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
       - name: Done!
         run: echo "Deployed to ECS Fargate Successfully"
